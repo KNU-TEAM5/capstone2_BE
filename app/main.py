@@ -1,5 +1,6 @@
 # app/main.py
 from fastapi import FastAPI
+from app.api.v1.qc import router as qc_router
 
 app = FastAPI(
     title="Capstone QC API",
@@ -14,3 +15,5 @@ def read_root():
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
+
+app.include_router(qc_router, prefix="/api/v1", tags=["Quality"])
