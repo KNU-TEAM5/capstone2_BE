@@ -1,5 +1,5 @@
 # app/api/v1/qc.py
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks
 from app.services.ml_service import (
     load_feature_importance,
     load_confusion_matrix,
@@ -7,6 +7,9 @@ from app.services.ml_service import (
     load_safe_region_result,
 )
 from app.services.data_service import process_uploaded_csv, get_sensor_file_info
+from app.services.analysis_service import run_analysis_pipeline
+import os
+import json
 
 router = APIRouter()
 
@@ -103,3 +106,64 @@ def get_sensor_files():
             status_code=500,
             detail=f"센서 파일 정보 조회 중 오류 발생: {str(e)}"
         )
+
+
+# 분석 상태를 저장할 전역 변수 (실제로는 Redis 등 사용 권장)
+analysis_status = {"status": "idle", "result": None}
+
+
+def run_analysis_task():
+    """백그라운드에서 분석 실행"""
+    global analysis_status
+    try:
+        analysis_status["status"] = "running"
+        result = run_analysis_pipeline(
+            data_dir="data",
+            output_dir="artifacts"
+        )
+        analysis_status["status"] = "completed"
+        analysis_status["result"] = result
+    except Exception as e:
+        analysis_status["status"] = "error"
+        analysis_status["result"] = {"error": str(e)}
+
+
+@router.post("/start-analysis")
+async def start_analysis(background_tasks: BackgroundTasks):
+    """
+    데이터 분석을 시작하는 엔드포인트
+
+    백그라운드에서 전체 분석 파이프라인을 실행합니다:
+    1. 데이터 전처리 및 병합
+    2. 데이터 정제
+    3. 품질 평가
+    4. EDA 리포트 생성
+    5. 모델 학습 및 평가
+    6. 안전 영역 분석
+    """
+    global analysis_status
+
+    if analysis_status["status"] == "running":
+        raise HTTPException(
+            status_code=400,
+            detail="분석이 이미 실행 중입니다."
+        )
+
+    background_tasks.add_task(run_analysis_task)
+
+    return {
+        "message": "분석이 시작되었습니다.",
+        "status": "running"
+    }
+
+
+@router.get("/analysis-status")
+def get_analysis_status():
+    """
+    분석 상태를 조회하는 엔드포인트
+
+    Returns:
+        - status: idle, running, completed, error
+        - result: 분석 완료 시 결과 반환
+    """
+    return analysis_status
