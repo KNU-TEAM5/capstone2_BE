@@ -1,11 +1,12 @@
 # app/api/v1/qc.py
-from fastapi import APIRouter
+from fastapi import APIRouter, UploadFile, File, HTTPException
 from app.services.ml_service import (
     load_feature_importance,
     load_confusion_matrix,
     load_classification_report_rf,
-    load_safe_region_result,     
+    load_safe_region_result,
 )
+from app.services.data_service import process_uploaded_csv, get_sensor_file_info
 
 router = APIRouter()
 
@@ -52,3 +53,53 @@ def get_safe_region_result():
         raise HTTPException(status_code=404, detail=str(e))
 
     return result
+
+
+@router.post("/upload-csv")
+async def upload_csv_file(file: UploadFile = File(...)):
+    """
+    CSV 파일을 업로드하여 데이터 분석을 수행하는 엔드포인트
+
+    프론트엔드에서 CSV 파일을 업로드하면 파일을 저장하고
+    기본 분석 정보를 반환합니다.
+
+    반환 정보에는 업로드된 파일이 센서 파일인지 여부와
+    전체 센서 파일 개수 및 목록이 포함됩니다.
+    """
+    # CSV 파일인지 확인
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(
+            status_code=400,
+            detail="CSV 파일만 업로드 가능합니다."
+        )
+
+    try:
+        result = await process_uploaded_csv(file)
+        return {
+            "message": "파일 업로드 성공",
+            "filename": file.filename,
+            "analysis": result
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"파일 처리 중 오류 발생: {str(e)}"
+        )
+
+
+@router.get("/sensor-files")
+def get_sensor_files():
+    """
+    업로드된 센서 파일 정보를 조회하는 엔드포인트
+
+    파일명에 'error'가 포함되지 않은 CSV 파일을 센서 파일로 분류합니다.
+    센서 파일 개수와 파일명 리스트를 반환합니다.
+    """
+    try:
+        sensor_info = get_sensor_file_info()
+        return sensor_info
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"센서 파일 정보 조회 중 오류 발생: {str(e)}"
+        )
