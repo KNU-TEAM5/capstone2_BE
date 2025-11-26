@@ -27,8 +27,21 @@ async def process_uploaded_csv(file: UploadFile) -> Dict[str, Any]:
     # 파일 읽기
     contents = await file.read()
 
-    # pandas로 CSV 파싱
-    df = pd.read_csv(io.BytesIO(contents))
+    # pandas로 CSV 파싱 (여러 인코딩 시도)
+    encodings = ['utf-8', 'cp949', 'euc-kr', 'latin1']
+    df = None
+    last_error = None
+
+    for encoding in encodings:
+        try:
+            df = pd.read_csv(io.BytesIO(contents), encoding=encoding)
+            break  # 성공하면 루프 종료
+        except (UnicodeDecodeError, UnicodeError) as e:
+            last_error = e
+            continue
+
+    if df is None:
+        raise ValueError(f"CSV 파일 인코딩을 감지할 수 없습니다. 시도한 인코딩: {encodings}. 마지막 오류: {last_error}")
 
     # 타임스탬프를 포함한 파일명 생성
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
