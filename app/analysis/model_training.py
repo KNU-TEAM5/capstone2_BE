@@ -23,12 +23,6 @@ from sklearn.metrics import (
 import joblib
 import json
 
-# 딥러닝 및 AutoML 관련
-import tensorflow as tf
-from tensorflow.keras.utils import plot_model
-import autokeras as ak
-
-
 # 이곳에 모델 학습 및 분석 함수들을 작성하세요
 from typing import Dict, Any, Tuple
 
