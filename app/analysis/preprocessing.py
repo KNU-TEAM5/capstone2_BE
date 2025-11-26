@@ -98,6 +98,7 @@ def process_sensor_files(sensor_paths: List[Path], num_files: int = 2) -> Dict[s
         "dataframes": dfs_for_merge,
         "file_count": len(dfs_for_merge)
     }
+    # 모든 파일 처리가 완료되면, 최종 데이터프레임 리스트와 처리된 파일 개수를 포함하는 딕셔너리를 반환
 
 
 def get_sensor_files_summary(sensor_paths: List[Path]) -> Dict[str, Any]:
@@ -126,9 +127,11 @@ def get_sensor_files_summary(sensor_paths: List[Path]) -> Dict[str, Any]:
         "total_rows": total_rows,
         "per_file": per_file
     }
+# 파일 상태 확인용
 
 
 def merge_sensor_dataframes(dfs: List[pd.DataFrame]) -> pd.DataFrame:
+    # List[pd.DataFrame]: 병합할 pandas 데이터프레임들을 담고 있는 리스트
     """
     여러 DataFrame을 병합
 
@@ -196,6 +199,7 @@ def preprocess_and_merge_sensors(
         p for p in data_path.glob("*.csv")
         if not re.search(r'error', p.name, flags=re.IGNORECASE)
     ]
+    # 센서 파일 - 이름에 error가 들어간 파일 제외
 
     if len(sensor_paths) == 0:
         raise ValueError("센서 파일이 없습니다.")
