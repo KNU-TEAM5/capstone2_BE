@@ -8,20 +8,19 @@ ART_DIR = "artifacts"
 
 def load_feature_importance():
     path = os.path.join(ART_DIR, "feature_importance_rf.csv")
-    
+
     if not os.path.exists(path):
         return {"error": "feature importance file not found"}
-    
-    df = pd.read_csv(path)
-    
-    # 1) Unnamed: 0 컬럼을 feature로 이름 변경
-    if "Unnamed: 0" in df.columns:
-        df = df.rename(columns={"Unnamed: 0": "feature"})
-    
-    # 2) 필요 없는 컬럼만 남기기 (선택)
-    df = df[["feature", "importance"]]
-    
-    return df.to_dict(orient="records")
+
+    # 첫 번째 컬럼을 인덱스로 읽기
+    df = pd.read_csv(path, index_col=0)
+
+    # 인덱스를 feature 컬럼으로 변환
+    df = df.reset_index()
+    df = df.rename(columns={df.columns[0]: "feature"})
+
+    # feature와 importance만 반환
+    return df[["feature", "importance"]].to_dict(orient="records")
 
 def load_confusion_matrix(csv_path: str):
     """
