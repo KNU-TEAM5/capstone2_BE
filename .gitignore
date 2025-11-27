@@ -26,9 +26,10 @@ venv/
 
 # Models and artifacts (선택적 제외)
 artifacts/*.png
-artifacts/*.csv
 artifacts/*.txt
 artifacts/*.joblib
+# CSV 파일은 필요하므로 제외하지 않음
+# artifacts/*.csv
 
 # Optional: data files
 data_kmap/
