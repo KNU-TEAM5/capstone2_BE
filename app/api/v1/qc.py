@@ -7,7 +7,7 @@ from app.services.ml_service import (
     load_classification_report_rf,
     load_safe_region_result,
 )
-from app.services.data_service import process_uploaded_csv, get_sensor_file_info
+from app.services.data_service import process_uploaded_csv, get_sensor_file_info, delete_file
 from app.services.analysis_service import run_analysis_pipeline
 import os
 import json
@@ -175,6 +175,42 @@ def get_sensor_files():
         raise HTTPException(
             status_code=500,
             detail=f"센서 파일 정보 조회 중 오류 발생: {str(e)}"
+        )
+
+
+@router.delete("/sensor-files/{filename}")
+def delete_sensor_file(filename: str):
+    """
+    특정 파일을 삭제하는 엔드포인트
+
+    프론트엔드에서 파일명을 전달하면 해당 파일을 삭제합니다.
+
+    Args:
+        filename: 삭제할 파일명 (예: uploaded_20251127_143022_sensor1.csv)
+
+    Returns:
+        삭제 결과 정보
+    """
+    try:
+        result = delete_file(filename)
+        return {
+            "message": "파일 삭제 성공",
+            **result
+        }
+    except FileNotFoundError as e:
+        raise HTTPException(
+            status_code=404,
+            detail=str(e)
+        )
+    except PermissionError as e:
+        raise HTTPException(
+            status_code=403,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"파일 삭제 중 오류 발생: {str(e)}"
         )
 
 

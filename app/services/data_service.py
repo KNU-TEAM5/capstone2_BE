@@ -128,3 +128,36 @@ def get_sensor_file_info(data_dir: str = DATA_DIR) -> Dict[str, Any]:
         "sensor_file_count": len(sensor_files),
         "sensor_files": sensor_files
     }
+
+
+def delete_file(filename: str, data_dir: str = DATA_DIR) -> Dict[str, Any]:
+    """
+    지정된 파일을 삭제
+
+    Args:
+        filename: 삭제할 파일명
+        data_dir: 데이터 디렉토리 경로
+
+    Returns:
+        삭제 결과 정보
+
+    Raises:
+        FileNotFoundError: 파일이 존재하지 않는 경우
+        PermissionError: 파일 삭제 권한이 없는 경우
+    """
+    file_path = Path(data_dir) / filename
+
+    if not file_path.exists():
+        raise FileNotFoundError(f"파일을 찾을 수 없습니다: {filename}")
+
+    # 파일이 디렉토리 밖에 있는지 확인 (보안)
+    if not str(file_path.resolve()).startswith(str(Path(data_dir).resolve())):
+        raise PermissionError("허용되지 않은 경로입니다")
+
+    # 파일 삭제
+    os.remove(file_path)
+
+    return {
+        "deleted_file": filename,
+        "deleted_path": str(file_path)
+    }
