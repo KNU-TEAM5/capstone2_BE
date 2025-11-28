@@ -16,6 +16,7 @@ app.add_middleware(
         "https://samsung-lac.vercel.app",
         "http://localhost:3000",  # 로컬 개발용
         "http://localhost:5173",  # Vite 개발 서버용
+        "http://127.0.0.1:5500",  # LiveServer
     ],
     allow_credentials=True,
     allow_methods=["*"],  # 모든 HTTP 메소드 허용
