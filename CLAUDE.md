@@ -44,10 +44,8 @@ app/
 ├── api/
 │   └── v1/
 │       └── qc.py        # 품질 관리 엔드포인트
-├── services/
-│   └── ml_service.py    # ML 아티팩트 로딩 로직
-└── models/
-    └── responses.py     # 응답 모델 (현재 비어있음)
+└── services/
+    └── ml_service.py    # ML 아티팩트 로딩 로직
 ```
 
 ### 주요 설계 패턴
