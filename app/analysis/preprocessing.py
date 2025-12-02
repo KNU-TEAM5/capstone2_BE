@@ -1,4 +1,5 @@
 # app/analysis/preprocessing.py
+# 데이터 전처리 로직 - csv읽기, 컬럼 정규화, 파일 병합, 결측치 제거, 이상치 제거
 
 import os
 import pandas as pd

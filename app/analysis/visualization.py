@@ -1,5 +1,5 @@
 # app/analysis/visualization.py
-
+# 시각화 기능 - 히스토그램, 상관관계, 혼동행렬, ROC 곡선
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns

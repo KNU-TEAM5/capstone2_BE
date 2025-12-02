@@ -1,4 +1,5 @@
 # app/analysis/model_training.py
+# ml 모델 학습 및 저장 - RandomForest 학습, 모델 평가 및 artifacts 생성
 
 import os
 import datetime

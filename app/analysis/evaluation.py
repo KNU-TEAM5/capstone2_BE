@@ -1,4 +1,5 @@
 # app/analysis/evaluation.py
+# 데이터 품질 평가 및 안전 영역 분석 - DAI 계산, 안전 영역 추정 로직
 
 import pandas as pd
 import numpy as np
