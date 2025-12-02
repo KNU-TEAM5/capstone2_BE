@@ -1,7 +1,7 @@
 # app/main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.v1.qc import router as qc_router
+from app.api.v1 import results, files, analysis
 
 app = FastAPI(
     title="Capstone QC API",
@@ -31,4 +31,7 @@ def read_root():
 def health_check():
     return {"status": "ok"}
 
-app.include_router(qc_router, prefix="/api/v1", tags=["Quality"])
+# API 라우터 등록
+app.include_router(results.router, prefix="/api/v1", tags=["Results"])
+app.include_router(files.router, prefix="/api/v1", tags=["Files"])
+app.include_router(analysis.router, prefix="/api/v1", tags=["Analysis"])
