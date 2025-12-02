@@ -1,286 +1,453 @@
 # 데이터 플로우 다이어그램
 
-전해탈지 공정 데이터가 수집되어 ML 분석을 거쳐 최종 사용자에게 전달되는 전체 흐름을 나타냅니다.
+## 전체 데이터 흐름 개요
 
-## 1. 전체 데이터 파이프라인
+```mermaid
+flowchart TB
+    subgraph Input["📥 입력 단계"]
+        A[사용자 CSV 파일]
+    end
+
+    subgraph Upload["1️⃣ 업로드 & 저장"]
+        B[POST /upload-csv]
+        C[data_service.process_uploaded_csv]
+        D[data/ 폴더에 저장<br/>uploaded_YYYYMMDD_HHMMSS_*.csv]
+    end
+
+    subgraph Analysis["2️⃣ 분석 파이프라인 실행"]
+        E[POST /start-analysis]
+        F[BackgroundTasks 등록]
+        G[analysis_service.run_analysis_pipeline]
+
+        subgraph Pipeline["7단계 순차 실행"]
+            G1[1. 데이터 전처리 & 병합<br/>→ combined_data.csv]
+            G2[2. 데이터 정제<br/>→ cleaned_data.csv]
+            G3[3. 품질 평가<br/>→ DQI 계산]
+            G4[4. EDA 리포트<br/>→ eda/*.png]
+            G5[5. 모델 학습<br/>→ model_rf.joblib]
+            G6[6. 결과 저장<br/>→ 4개 파일]
+            G7[7. 안전 영역 분석<br/>→ safe_region_result.json]
+        end
+    end
+
+    subgraph Artifacts["📊 분석 결과 (artifacts/)"]
+        H1[feature_importance_rf.csv]
+        H2[confusion_matrix_rf.csv]
+        H3[classification_report_rf.json]
+        H4[safe_region_result.json]
+        H5[combined_data.csv]
+        H6[cleaned_data.csv]
+        H7[model_rf.joblib]
+    end
+
+    subgraph Query["3️⃣ 결과 조회"]
+        I[GET /feature-importance<br/>GET /confusion-matrix<br/>GET /classification-report-rf<br/>GET /safe-region]
+        J[artifact_service]
+        K[JSON 응답]
+    end
+
+    subgraph Frontend["💻 프론트엔드"]
+        L[결과 시각화]
+    end
+
+    A --> B
+    B --> C
+    C --> D
+
+    E --> F
+    F --> G
+    G --> Pipeline
+
+    G1 --> G2
+    G2 --> G3
+    G3 --> G4
+    G4 --> G5
+    G5 --> G6
+    G6 --> G7
+
+    Pipeline --> Artifacts
+
+    Artifacts --> J
+    I --> J
+    J --> K
+    K --> L
+
+    style Input fill:#e1f5ff
+    style Upload fill:#fff4e1
+    style Analysis fill:#ffe1f5
+    style Artifacts fill:#e1ffe1
+    style Query fill:#f5e1ff
+    style Frontend fill:#ffe1e1
+```
+
+---
+
+## 상세 데이터 플로우
+
+### Flow 1: CSV 업로드 → data/ 저장
 
 ```mermaid
 flowchart LR
-    subgraph "데이터 수집"
-        RAW[원본 센서 데이터<br/>CSV 파일]
-        ERROR[에러 로그<br/>CSV 파일]
-    end
+    A[사용자 CSV 파일] -->|multipart/form-data| B[POST /api/v1/upload-csv]
+    B --> C{파일 확장자 검증}
+    C -->|.csv 아님| D[400 Error]
+    C -->|.csv 맞음| E[data_service.process_uploaded_csv]
 
-    subgraph "데이터 업로드 (백엔드)"
-        UPLOAD[파일 업로드<br/>POST /upload-csv]
-        STORAGE[(data/ 디렉토리)]
-    end
+    E --> F[여러 인코딩 시도<br/>utf-8, cp949, euc-kr]
+    F --> G[pandas DataFrame 생성]
+    G --> H[타임스탬프 생성<br/>YYYYMMDD_HHMMSS]
+    H --> I[파일명 생성<br/>uploaded_TIMESTAMP_원본명.csv]
+    I --> J[data/ 폴더에 저장]
 
-    subgraph "ML Pipeline (외부/백그라운드)"
-        PREPROCESS[데이터 전처리<br/>병합 및 정제]
-        QUALITY[품질 평가<br/>불량/정상 분류]
-        TRAIN[모델 학습<br/>RandomForest]
-        EVAL[모델 평가<br/>성능 분석]
-        SAFE[안전 영역 분석<br/>공정 최적화]
-    end
+    J --> K[기본 분석 수행<br/>행/열 수, 결측치, 통계]
+    K --> L[200 OK<br/>분석 정보 반환]
 
-    subgraph "Artifacts 저장"
-        ART[(artifacts/<br/>ML 결과물)]
-    end
-
-    subgraph "API 서비스"
-        API[FastAPI 백엔드<br/>GET /api/v1/*]
-    end
-
-    subgraph "데이터 시각화"
-        DASH[프론트엔드<br/>대시보드]
-        CHART[차트/그래프<br/>인사이트]
-    end
-
-    %% 데이터 흐름
-    RAW --> UPLOAD
-    ERROR --> UPLOAD
-    UPLOAD --> STORAGE
-
-    STORAGE --> PREPROCESS
-    PREPROCESS --> QUALITY
-    QUALITY --> TRAIN
-    TRAIN --> EVAL
-    EVAL --> SAFE
-    SAFE --> ART
-
-    ART --> API
-    API --> DASH
-    DASH --> CHART
-
-    style RAW fill:#e3f2fd
-    style ERROR fill:#ffebee
-    style UPLOAD fill:#fff3e0
-    style STORAGE fill:#f3e5f5
-    style PREPROCESS fill:#e8f5e9
-    style QUALITY fill:#e8f5e9
-    style TRAIN fill:#e8f5e9
-    style EVAL fill:#e8f5e9
-    style SAFE fill:#e8f5e9
-    style ART fill:#fff9c4
-    style API fill:#ffe0b2
-    style DASH fill:#e1f5fe
-    style CHART fill:#e1f5fe
+    style D fill:#ffcccc
+    style L fill:#ccffcc
 ```
 
-## 2. API 요청 플로우 (상세)
+**데이터 변환:**
+- 입력: Binary file (CSV)
+- 중간: pandas DataFrame (메모리)
+- 출력: CSV 파일 (data/uploaded_YYYYMMDD_HHMMSS_원본명.csv)
 
-### 2.1 ML 아티팩트 조회 플로우
+---
+
+### Flow 2: 분석 실행 → artifacts/ 생성
+
+```mermaid
+flowchart TB
+    Start[POST /api/v1/start-analysis] --> Check{상태 확인}
+    Check -->|이미 실행 중| Error[400 Error]
+    Check -->|idle| BG[BackgroundTasks 등록]
+
+    BG --> Status1[status = 'running']
+    Status1 --> Response[200 OK 즉시 반환]
+
+    BG --> Pipeline[run_analysis_pipeline 백그라운드 실행]
+
+    Pipeline --> Step1[1️⃣ 전처리 & 병합]
+    Step1 --> File1[combined_data.csv]
+
+    File1 --> Step2[2️⃣ 데이터 정제]
+    Step2 --> File2[cleaned_data.csv]
+
+    File2 --> Step3[3️⃣ 품질 평가]
+    Step3 --> Calc1[DQI 계산<br/>메모리만]
+
+    Calc1 --> Step4[4️⃣ EDA 리포트]
+    Step4 --> Files4[eda/*.png<br/>시각화 파일들]
+
+    Files4 --> Step5[5️⃣ 모델 학습]
+    Step5 --> File5[model_rf.joblib]
+
+    File5 --> Step6[6️⃣ 결과 저장]
+    Step6 --> Files6A[feature_importance_rf.csv]
+    Step6 --> Files6B[confusion_matrix_rf.csv]
+    Step6 --> Files6C[classification_report_rf.json]
+    Step6 --> Files6D[metrics_summary_randomforest.json]
+
+    Files6D --> Step7[7️⃣ 안전 영역 분석]
+    Step7 --> File7[safe_region_result.json]
+
+    File7 --> Status2[status = 'completed']
+    Status2 --> Result[result = summary]
+
+    style Error fill:#ffcccc
+    style Response fill:#ccffcc
+    style Status2 fill:#ccffcc
+```
+
+**데이터 변환 상세:**
+
+| 단계 | 입력 | 처리 | 출력 |
+|-----|------|------|------|
+| 1. 전처리 | data/*.csv 여러 파일 | 컬럼 정규화, 병합 | combined_data.csv |
+| 2. 정제 | combined_data.csv | 결측치 제거, Z-score 이상치 제거 | cleaned_data.csv |
+| 3. 품질 평가 | cleaned_data.csv | DQI 계산 (0~1 점수) | 메모리 (파일 저장 안함) |
+| 4. EDA | cleaned_data.csv | matplotlib 시각화 | eda/*.png (5~10개 그래프) |
+| 5. 모델 학습 | cleaned_data.csv | RandomForest 학습 | model_rf.joblib, scaler.joblib |
+| 6. 평가 결과 | 학습 완료 모델 | 예측 & 평가 메트릭 | 4개 CSV/JSON 파일 |
+| 7. 안전 영역 | 학습 완료 모델 | 격자점 예측 & 영역 추정 | safe_region_result.json |
+
+---
+
+### Flow 3: 결과 조회 → JSON 응답
+
+```mermaid
+flowchart LR
+    A[GET /api/v1/feature-importance] --> B[artifact_service.load_feature_importance]
+    B --> C[artifacts/feature_importance_rf.csv 읽기]
+    C --> D{파일 존재?}
+    D -->|없음| E[error: file not found 반환]
+    D -->|있음| F[pandas로 CSV 읽기]
+    F --> G[인덱스 → feature 컬럼 변환]
+    G --> H[.to_dict orient=records]
+    H --> I[JSON 응답<br/>feature, importance 배열]
+
+    style E fill:#ffcccc
+    style I fill:#ccffcc
+```
+
+```mermaid
+flowchart LR
+    A[GET /api/v1/confusion-matrix] --> B[artifact_service.load_confusion_matrix]
+    B --> C[artifacts/confusion_matrix_rf.csv 읽기]
+    C --> D[pandas DataFrame]
+    D --> E[true_0/pred_0 → normal_to_normal]
+    E --> F[true_0/pred_1 → normal_to_defect]
+    F --> G[true_1/pred_0 → defect_to_normal]
+    G --> H[true_1/pred_1 → defect_to_defect]
+    H --> I[JSON 응답<br/>의미론적 키]
+
+    style I fill:#ccffcc
+```
+
+```mermaid
+flowchart LR
+    A[GET /api/v1/classification-report-rf] --> B[artifact_service.load_classification_report_rf]
+    B --> C[artifacts/classification_report_rf.json]
+    C --> D{파일 존재?}
+    D -->|없음| E[404 FileNotFoundError]
+    D -->|있음| F[json.load]
+    F --> G[JSON 응답<br/>precision, recall, f1-score]
+
+    style E fill:#ffcccc
+    style G fill:#ccffcc
+```
+
+```mermaid
+flowchart LR
+    A[GET /api/v1/safe-region] --> B[artifact_service.load_safe_region_result]
+    B --> C[artifacts/safe_region_result.json]
+    C --> D{파일 존재?}
+    D -->|없음| E[404 FileNotFoundError]
+    D -->|있음| F[json.load]
+    F --> G[JSON 응답<br/>안전 범위 정보]
+
+    style E fill:#ffcccc
+    style G fill:#ccffcc
+```
+
+**데이터 변환:**
+- CSV 파일 → pandas DataFrame → Python dict → JSON
+- JSON 파일 → Python dict → JSON (그대로 전달)
+
+---
+
+### Flow 4: 상태 조회 (폴링)
 
 ```mermaid
 sequenceDiagram
-    participant User as 사용자
-    participant FE as 프론트엔드
-    participant API as FastAPI
-    participant Router as QC Router
-    participant Service as ML Service
-    participant FS as Artifacts 파일
+    participant FE as Frontend
+    participant API as Analysis API
+    participant Mem as 메모리<br/>(analysis_status)
 
-    User->>FE: 데이터 조회 요청
-    FE->>API: GET /api/v1/feature-importance
-    API->>Router: 라우팅
-    Router->>Service: load_feature_importance()
-    Service->>FS: feature_importance_rf.csv 읽기
-    FS-->>Service: CSV 데이터
-    Service->>Service: DataFrame → dict 변환
-    Service-->>Router: JSON 데이터
-    Router-->>API: HTTP Response
-    API-->>FE: JSON Response
-    FE->>FE: 차트 렌더링
-    FE-->>User: 시각화 표시
+    Note over FE: 분석 시작 후 매 3초마다 폴링
 
-    Note over Service,FS: 동일한 플로우:<br/>confusion-matrix<br/>classification-report<br/>safe-region
-```
+    loop 주기적 상태 확인
+        FE->>+API: GET /api/v1/analysis-status
+        API->>Mem: analysis_status 딕셔너리 읽기
+        Mem-->>API: {"status": "running", "result": null}
+        API-->>-FE: 현재 상태 반환
 
-### 2.2 CSV 파일 업로드 플로우
-
-```mermaid
-sequenceDiagram
-    participant User as 사용자
-    participant FE as 프론트엔드
-    participant API as FastAPI
-    participant Router as QC Router
-    participant Service as Data Service
-    participant FS as data/ 디렉토리
-
-    User->>FE: CSV 파일 선택
-    FE->>API: POST /api/v1/upload-csv<br/>(multipart/form-data)
-    API->>Router: 라우팅
-    Router->>Router: CSV 파일 검증
-    Router->>Service: process_uploaded_csv()
-    Service->>Service: 파일명 생성<br/>(timestamp 추가)
-    Service->>FS: 파일 저장
-    Service->>Service: 센서 파일 분석<br/>(error 포함 여부 확인)
-    Service-->>Router: 업로드 결과
-    Router-->>API: HTTP Response
-    API-->>FE: JSON Response<br/>(filename, analysis)
-    FE-->>User: 업로드 성공 메시지
-```
-
-### 2.3 백그라운드 분석 실행 플로우
-
-```mermaid
-sequenceDiagram
-    participant User as 사용자
-    participant FE as 프론트엔드
-    participant API as FastAPI
-    participant Router as QC Router
-    participant BG as Background Task
-    participant Analysis as Analysis Service
-    participant Data as data/ 디렉토리
-    participant Artifacts as artifacts/ 디렉토리
-
-    User->>FE: 분석 시작 요청
-    FE->>API: POST /api/v1/start-analysis
-    API->>Router: 라우팅
-    Router->>Router: 분석 상태 확인<br/>(idle/running)
-    Router->>BG: BackgroundTask 등록
-    Router-->>API: 즉시 응답
-    API-->>FE: {"status": "running"}
-    FE-->>User: 분석 시작 알림
-
-    par 백그라운드 실행
-        BG->>Analysis: run_analysis_pipeline()
-        Analysis->>Data: 업로드된 CSV 파일 읽기
-        Analysis->>Analysis: 데이터 전처리 및 병합
-        Analysis->>Analysis: 품질 평가
-        Analysis->>Analysis: 모델 학습 (RandomForest)
-        Analysis->>Analysis: 모델 평가
-        Analysis->>Analysis: 안전 영역 분석
-        Analysis->>Artifacts: 결과물 저장<br/>(CSV, JSON)
-        Analysis-->>BG: 분석 완료
+        alt status == "completed"
+            FE->>FE: 폴링 중지
+            FE->>FE: 결과 화면으로 이동
+        else status == "running"
+            FE->>FE: 3초 대기
+            Note over FE: 다음 폴링 준비
+        else status == "error"
+            FE->>FE: 에러 메시지 표시
+            FE->>FE: 폴링 중지
+        end
     end
-
-    loop 상태 폴링
-        FE->>API: GET /api/v1/analysis-status
-        API->>Router: 라우팅
-        Router-->>API: {"status": "running"}
-        API-->>FE: 현재 상태
-    end
-
-    FE->>API: GET /api/v1/analysis-status
-    API->>Router: 라우팅
-    Router-->>API: {"status": "completed", "result": {...}}
-    API-->>FE: 분석 완료
-    FE-->>User: 완료 알림 + 결과 표시
 ```
 
-## 3. 데이터 변환 과정
+**상태 데이터 구조:**
+```json
+{
+  "status": "idle | running | completed | error",
+  "result": null | {
+    "status": "success",
+    "data_summary": {...},
+    "model": {...},
+    "safe_region": {...}
+  }
+}
+```
 
-### 3.1 특성 중요도 (Feature Importance)
+---
+
+## 파일 생성 타임라인
+
+분석 파이프라인 실행 시 파일들이 생성되는 순서와 예상 소요 시간:
+
+```
+t=0s     │ POST /start-analysis 호출
+         │ └─ 200 OK 즉시 반환
+         │
+t=0~5s   │ 🔄 1단계: 전처리 & 병합
+         │ └─ artifacts/combined_data.csv 생성
+         │
+t=5~10s  │ 🔄 2단계: 데이터 정제
+         │ └─ artifacts/cleaned_data.csv 생성
+         │
+t=10~15s │ 🔄 3단계: 품질 평가
+         │ └─ (파일 생성 없음, 메모리만)
+         │
+t=15~30s │ 🔄 4단계: EDA 리포트
+         │ └─ artifacts/eda/*.png (여러 파일)
+         │
+t=30~50s │ 🔄 5단계: 모델 학습
+         │ └─ artifacts/model_rf.joblib
+         │ └─ artifacts/scaler.joblib
+         │
+t=50~55s │ 🔄 6단계: 평가 결과 저장
+         │ ├─ artifacts/feature_importance_rf.csv
+         │ ├─ artifacts/confusion_matrix_rf.csv
+         │ ├─ artifacts/classification_report_rf.json
+         │ └─ artifacts/metrics_summary_randomforest.json
+         │
+t=55~65s │ 🔄 7단계: 안전 영역 분석
+         │ └─ artifacts/safe_region_result.json
+         │
+t=65s    │ ✅ 분석 완료
+         │ └─ status = "completed"
+```
+
+**총 소요 시간**: 약 60~90초 (데이터 크기에 따라 변동)
+
+---
+
+## 데이터 생명주기 상태 다이어그램
 
 ```mermaid
-graph LR
-    A[CSV 파일<br/>feature_importance_rf.csv] --> B[Pandas DataFrame]
-    B --> C[인덱스 리셋]
-    C --> D[컬럼명 변경<br/>Unnamed:0 → feature]
-    D --> E[dict 변환<br/>orient=records]
-    E --> F[JSON Response<br/>feature, importance]
+stateDiagram-v2
+    [*] --> 원본CSV: 사용자 업로드
 
-    style A fill:#e3f2fd
-    style F fill:#c8e6c9
+    원본CSV --> 저장됨: data/ 저장
+
+    저장됨 --> 병합중: 분석 시작
+    병합중 --> combined_data: 1단계 완료
+
+    combined_data --> 정제중: 2단계 시작
+    정제중 --> cleaned_data: 2단계 완료
+
+    cleaned_data --> 품질평가: 3단계 시작
+    품질평가 --> DQI계산완료: 3단계 완료
+
+    DQI계산완료 --> EDA생성중: 4단계 시작
+    EDA생성중 --> EDA완료: PNG 파일들 생성
+
+    EDA완료 --> 모델학습중: 5단계 시작
+    모델학습중 --> 모델완료: joblib 저장
+
+    모델완료 --> 평가중: 6단계 시작
+    평가중 --> 평가완료: CSV/JSON 저장
+
+    평가완료 --> 안전영역분석: 7단계 시작
+    안전영역분석 --> 분석완료: JSON 저장
+
+    분석완료 --> 조회가능: API 엔드포인트로 제공
+
+    조회가능 --> [*]: 프론트엔드 시각화
 ```
 
-**예시 변환:**
-```
-CSV:                        JSON:
-Unnamed: 0, importance  →  [
-current, 0.45              {"feature": "current", "importance": 0.45},
-voltage, 0.32              {"feature": "voltage", "importance": 0.32},
-temp, 0.23                 {"feature": "temp", "importance": 0.23}
-                           ]
-```
+---
 
-### 3.2 혼동 행렬 (Confusion Matrix)
+## 저장소별 역할
 
-```mermaid
-graph LR
-    A[CSV 파일<br/>confusion_matrix_rf.csv] --> B[Pandas DataFrame]
-    B --> C[인덱스 설정<br/>true_0, true_1]
-    C --> D[값 추출<br/>tn, fp, fn, tp]
-    D --> E[의미론적 키 매핑]
-    E --> F[JSON Response<br/>normal/defect]
+| 저장소 | 경로 | 용도 | 생성 시점 | 소비 주체 |
+|--------|------|------|----------|-----------|
+| **원본 데이터** | `data/uploaded_*.csv` | 사용자 업로드 CSV | 업로드 API 호출 시 | analysis_service |
+| **병합 데이터** | `artifacts/combined_data.csv` | 여러 센서 데이터 병합 | 분석 1단계 | 분석 2~7단계 |
+| **정제 데이터** | `artifacts/cleaned_data.csv` | 결측치/이상치 제거 | 분석 2단계 | 분석 3~7단계 |
+| **시각화** | `artifacts/eda/*.png` | 탐색적 데이터 분석 | 분석 4단계 | (프론트 직접 조회 가능) |
+| **모델** | `artifacts/model_rf.joblib` | 학습된 RandomForest | 분석 5단계 | 분석 7단계 (안전 영역) |
+| **평가 결과** | `artifacts/*_rf.{csv,json}` | 모델 성능 메트릭 | 분석 6단계 | artifact_service → API |
+| **안전 영역** | `artifacts/safe_region_result.json` | 공정 안전 파라미터 | 분석 7단계 | artifact_service → API |
+| **상태 정보** | 메모리 (analysis_status) | 분석 실행 상태 | 분석 시작/완료 | Analysis API |
 
-    style A fill:#e3f2fd
-    style F fill:#c8e6c9
-```
+---
 
-**예시 변환:**
-```
-CSV:                          JSON:
-       pred_0  pred_1     →  {
-true_0   850     15           "normal_to_normal": 850,
-true_1    12     98           "normal_to_defect": 15,
-                              "defect_to_normal": 12,
-                              "defect_to_defect": 98
-                             }
-```
+## 데이터 변환 요약
 
-## 4. 주요 데이터 파일
+### 인코딩 & 파싱
+- **입력**: Binary CSV file
+- **처리**:
+  1. UTF-8 시도
+  2. CP949 시도 (한글 Windows)
+  3. EUC-KR 시도 (레거시 한글)
+- **출력**: pandas DataFrame
 
-### Artifacts 디렉토리 (ML 결과물)
-| 파일명 | 형식 | 용도 | 크기 |
-|--------|------|------|------|
-| `feature_importance_rf.csv` | CSV | 특성 중요도 점수 | ~1KB |
-| `confusion_matrix_rf.csv` | CSV | 혼동 행렬 (2x2) | <1KB |
-| `classification_report_rf.json` | JSON | 분류 메트릭 (정밀도, 재현율, F1) | ~2KB |
-| `metrics_summary_randomforest.json` | JSON | 모델 성능 요약 | ~1KB |
-| `safe_region_result.json` | JSON | 공정 안전 구간 분석 | ~5KB |
-| `combined_data.csv` | CSV | 통합 데이터셋 | 425KB |
+### 정규화 & 병합
+- **입력**: 여러 센서 CSV 파일들
+- **처리**:
+  1. 컬럼명 정규화 (소문자, 공백 제거)
+  2. 타임스탬프 기준 병합
+  3. 중복 제거
+- **출력**: combined_data.csv (단일 DataFrame)
 
-### Data 디렉토리 (업로드 파일)
-- 패턴: `uploaded_YYYYMMDD_HHMMSS_원본파일명.csv`
-- 센서 파일: 파일명에 'error' 미포함
-- 에러 파일: 파일명에 'error' 포함
+### 정제
+- **입력**: combined_data.csv
+- **처리**:
+  1. 결측치 행 제거
+  2. Z-score > 3 이상치 제거
+  3. 인덱스 리셋
+- **출력**: cleaned_data.csv
 
-## 5. 데이터 처리 특징
+### ML 학습
+- **입력**: cleaned_data.csv
+- **처리**:
+  1. train_test_split (80:20)
+  2. StandardScaler 적용
+  3. RandomForestClassifier 학습
+- **출력**:
+  - model_rf.joblib (모델)
+  - scaler.joblib (스케일러)
+  - 예측 결과 (메모리)
 
-### 서비스 레이어 패턴
-모든 아티팩트 로딩 함수는 일관된 패턴:
-1. `artifacts/` 디렉토리에서 파일 읽기
-2. 파일 없을 시 적절한 에러 처리 (`FileNotFoundError` 또는 에러 딕셔너리)
-3. JSON 직렬화 가능한 dict 형태로 반환
+### 평가 메트릭
+- **입력**: 예측 결과 (y_test vs y_pred)
+- **처리**:
+  1. confusion_matrix 계산
+  2. classification_report 생성
+  3. feature_importances_ 추출
+- **출력**:
+  - CSV (confusion matrix, feature importance)
+  - JSON (classification report, metrics summary)
 
-### 데이터 정규화
-- CSV 파일의 인덱스 컬럼 처리
-- 의미론적 키 이름 사용 (true_0 → normal_to_normal)
-- 프론트엔드 친화적 형식 변환
+### 안전 영역 추정
+- **입력**: 학습된 모델
+- **처리**:
+  1. 주요 특성 2개 선택
+  2. 격자점 생성 (100x100)
+  3. 각 격자점 예측
+  4. "정상" 예측 영역 계산
+- **출력**: safe_region_result.json
+  - 안전 범위 (min/max)
+  - 중심점
+  - 영역 비율
 
-### 파일 명명 규칙
-- 타임스탬프 기반 고유 파일명
-- 원본 파일명 보존
-- 파일 타입별 분류 (센서/에러)
+### API 응답 변환
+- **CSV → JSON**:
+  - pandas → `.to_dict(orient="records")`
+  - 의미론적 키로 매핑
+- **JSON → JSON**:
+  - 파일 그대로 전달
+  - 추가 변환 없음
 
-## 6. 확장 가능성
+---
 
-현재 시스템은 다음과 같은 확장이 가능합니다:
+## 다이어그램 렌더링 방법
 
-```mermaid
-graph TB
-    subgraph "현재 시스템"
-        CURRENT[정적 아티팩트<br/>파일 기반]
-    end
+### 1. GitHub에서 보기
+- 이 파일을 GitHub에 push하면 자동으로 렌더링됩니다
 
-    subgraph "확장 가능한 기능"
-        DB[(데이터베이스<br/>PostgreSQL/MongoDB)]
-        CACHE[(캐시<br/>Redis)]
-        QUEUE[작업 큐<br/>Celery/RQ]
-        RT[실시간 분석<br/>WebSocket]
-    end
+### 2. VS Code에서 보기
+- Mermaid 플러그인 설치: `Markdown Preview Mermaid Support`
+- 마크다운 미리보기 열기 (Cmd+Shift+V)
 
-    CURRENT -.-> DB
-    CURRENT -.-> CACHE
-    CURRENT -.-> QUEUE
-    CURRENT -.-> RT
-
-    style CURRENT fill:#c8e6c9
-    style DB fill:#fff9c4
-    style CACHE fill:#fff9c4
-    style QUEUE fill:#fff9c4
-    style RT fill:#fff9c4
-```
+### 3. 온라인 에디터
+- https://mermaid.live/ 에서 코드 붙여넣기
