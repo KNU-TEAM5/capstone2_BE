@@ -5,7 +5,7 @@
 ```mermaid
 graph TB
     subgraph "프론트엔드"
-        FE[Frontend<br/>React/Vue]
+        FE[Frontend<br/>React]
     end
 
     subgraph "백엔드 서버 (FastAPI)"
@@ -432,21 +432,25 @@ capstone2_BE/
 ## 설계 패턴
 
 ### 1. **계층형 아키텍처 (Layered Architecture)**
+
 ```
 API Layer → Service Layer → Domain Layer → Storage
 ```
 
 ### 2. **관심사의 분리 (Separation of Concerns)**
+
 - **results.py**: 조회만
 - **files.py**: 파일 관리만
 - **analysis.py**: 분석 실행만
 
 ### 3. **단일 책임 원칙 (Single Responsibility)**
+
 - **artifact_service**: 읽기 전용
 - **data_service**: 파일 관리
 - **analysis_service**: 파이프라인 조율
 
 ### 4. **의존성 방향**
+
 ```
 API → Service → Domain → Storage
 (상위 계층이 하위 계층에만 의존)
@@ -457,12 +461,14 @@ API → Service → Domain → Storage
 ## 확장 가능성
 
 ### 현재 구조의 장점
+
 ✅ API 버전 관리 (`/api/v1/`)
 ✅ 모듈화된 서비스
 ✅ 명확한 책임 분리
 ✅ 테스트 용이
 
 ### 향후 개선 방안
+
 🔄 Redis로 상태 관리 (메모리 → Redis)
 🔄 PostgreSQL로 메타데이터 관리
 🔄 S3로 파일 저장 (파일 시스템 → 클라우드)
@@ -473,11 +479,11 @@ API → Service → Domain → Storage
 
 ## 요약
 
-| 레이어 | 역할 | 구성 요소 |
-|-------|------|-----------|
-| **API** | 엔드포인트 정의 | results.py, files.py, analysis.py |
-| **Service** | 비즈니스 로직 | artifact_service, data_service, analysis_service |
-| **Domain** | 도메인 로직 | preprocessing, model_training, evaluation, visualization |
-| **Storage** | 데이터 저장 | data/, artifacts/, memory |
+| 레이어      | 역할            | 구성 요소                                                |
+| ----------- | --------------- | -------------------------------------------------------- |
+| **API**     | 엔드포인트 정의 | results.py, files.py, analysis.py                        |
+| **Service** | 비즈니스 로직   | artifact_service, data_service, analysis_service         |
+| **Domain**  | 도메인 로직     | preprocessing, model_training, evaluation, visualization |
+| **Storage** | 데이터 저장     | data/, artifacts/, memory                                |
 
 **핵심 원칙**: 각 레이어는 **명확한 책임**을 가지며, **상위 레이어만 하위 레이어에 의존**합니다.
