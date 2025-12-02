@@ -1,4 +1,8 @@
-# app/services/ml_service.py
+# app/services/artifact_service.py
+"""
+분석 결과 아티팩트 로딩 서비스
+artifacts/ 폴더에 저장된 ML 분석 결과 파일들을 읽어서 반환합니다.
+"""
 import pandas as pd
 import os
 from typing import Any, Dict
@@ -7,6 +11,12 @@ import json
 ART_DIR = "artifacts"
 
 def load_feature_importance():
+    """
+    특성 중요도(Feature Importance) 데이터 로딩
+
+    Returns:
+        특성별 중요도 리스트 또는 에러 딕셔너리
+    """
     path = os.path.join(ART_DIR, "feature_importance_rf.csv")
 
     if not os.path.exists(path):
@@ -24,8 +34,13 @@ def load_feature_importance():
 
 def load_confusion_matrix(csv_path: str):
     """
-    confusion_matrix_randomforest.csv 파일을 읽어서
-    프론트 용도로 가공된 dict 형태로 반환한다.
+    혼동 행렬(Confusion Matrix) 데이터 로딩
+
+    Args:
+        csv_path: CSV 파일 경로
+
+    Returns:
+        혼동 행렬 값들을 의미론적 키로 매핑한 딕셔너리
     """
     df = pd.read_csv(csv_path)
 
@@ -46,7 +61,14 @@ def load_confusion_matrix(csv_path: str):
 
 def load_classification_report_rf() -> Dict[str, Any]:
     """
+    분류 리포트(Classification Report) 로딩
     artifacts/classification_report_rf.json 파일을 읽어서 dict로 반환
+
+    Returns:
+        분류 리포트 딕셔너리
+
+    Raises:
+        FileNotFoundError: 파일이 존재하지 않는 경우
     """
     json_path = os.path.join(ART_DIR, "classification_report_rf.json")
 
@@ -60,7 +82,14 @@ def load_classification_report_rf() -> Dict[str, Any]:
 
 def load_safe_region_result() -> Dict[str, Any]:
     """
+    안전 영역 분석 결과 로딩
     artifacts/safe_region_result.json 파일을 읽어서 dict로 반환
+
+    Returns:
+        안전 영역 분석 결과 딕셔너리
+
+    Raises:
+        FileNotFoundError: 파일이 존재하지 않는 경우
     """
     json_path = os.path.join(ART_DIR, "safe_region_result.json")
 
