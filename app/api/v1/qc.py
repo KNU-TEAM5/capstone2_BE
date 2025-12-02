@@ -19,13 +19,13 @@ def get_feature_importance():
     """
     저장된 CSV 파일(feature importance)을 JSON으로 반환
     """
-    data = load_feature_importance()
+    data = load_feature_importance() # ml_service 사용
     return {"feature_importance": data}
 
 @router.get("/confusion-matrix")
 def get_confusion_matrix():
     csv_path = "artifacts/confusion_matrix_rf.csv"
-    cm_data = load_confusion_matrix(csv_path)
+    cm_data = load_confusion_matrix(csv_path) # ml_service 사용
 
     return {
         "confusion_matrix": cm_data
@@ -38,7 +38,7 @@ def get_classification_report_rf():
     (artifacts/classification_report_rf.json)
     """
     try:
-        report = load_classification_report_rf()
+        report = load_classification_report_rf() # ml_service 사용
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -52,7 +52,7 @@ def get_safe_region_result():
     → artifacts/safe_region_result.json 읽어서 그대로 반환
     """
     try:
-        result = load_safe_region_result()
+        result = load_safe_region_result() # ml_service 사용
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
