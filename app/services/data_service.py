@@ -1,4 +1,6 @@
 # app/services/data_service.py
+# 파일 관리 서비스 - csv업로드, 저장, 삭제 / 센서 파일 정보 조회
+
 import pandas as pd
 import os
 import re

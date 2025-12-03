@@ -1,4 +1,6 @@
 # app/services/analysis_service.py
+# 전체 분석 파이프라인 오케스트레이션 - analysis 폴더 함수 import해서 조합
+# run_full_pipeline() - 데이터 전처리 → 품질 평가 → EDA → 모델 학습 → 안전 영역 분석을 한 번에 실행
 
 import os
 import pandas as pd
