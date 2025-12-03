@@ -204,6 +204,13 @@ def preprocess_and_merge_sensors(
 
     if len(sensor_paths) == 0:
         raise ValueError("센서 파일이 없습니다.")
+        
+    # 최근 파일이 앞에 오도록 정렬
+    sensor_paths = sorted(
+    sensor_paths,
+    key=lambda p: p.stat().st_mtime,
+    reverse=True
+    )
 
     # 파일 처리
     processed = process_sensor_files(sensor_paths, num_files)
