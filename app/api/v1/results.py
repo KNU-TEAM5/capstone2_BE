@@ -28,7 +28,7 @@ def get_confusion_matrix():
     """
     혼동 행렬(Confusion Matrix) 데이터를 반환
     """
-    csv_path = "artifacts/confusion_matrix_rf.csv"
+    csv_path = "artifacts/confusion_matrix_randomforest.csv"
     cm_data = load_confusion_matrix(csv_path)
 
     return {
@@ -40,7 +40,7 @@ def get_confusion_matrix():
 def get_classification_report_rf():
     """
     RandomForest 분류 리포트 JSON 반환 엔드포인트
-    (artifacts/classification_report_rf.json)
+    (artifacts/classification_report_randomforest.json)
     """
     try:
         report = load_classification_report_rf()

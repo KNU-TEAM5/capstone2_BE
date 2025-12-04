@@ -17,7 +17,7 @@ def load_feature_importance():
     Returns:
         특성별 중요도 리스트 또는 에러 딕셔너리
     """
-    path = os.path.join(ART_DIR, "feature_importance_rf.csv")
+    path = os.path.join(ART_DIR, "feature_importance_randomforest.csv")
 
     if not os.path.exists(path):
         return {"error": "feature importance file not found"}
@@ -62,7 +62,7 @@ def load_confusion_matrix(csv_path: str):
 def load_classification_report_rf() -> Dict[str, Any]:
     """
     분류 리포트(Classification Report) 로딩
-    artifacts/classification_report_rf.json 파일을 읽어서 dict로 반환
+    artifacts/classification_report_randomforest.json 파일을 읽어서 dict로 반환
 
     Returns:
         분류 리포트 딕셔너리
@@ -70,7 +70,7 @@ def load_classification_report_rf() -> Dict[str, Any]:
     Raises:
         FileNotFoundError: 파일이 존재하지 않는 경우
     """
-    json_path = os.path.join(ART_DIR, "classification_report_rf.json")
+    json_path = os.path.join(ART_DIR, "classification_report_randomforest.json")
 
     if not os.path.exists(json_path):
         raise FileNotFoundError(f"파일을 찾을 수 없습니다: {json_path}")
