@@ -313,38 +313,13 @@ def save_model_artifacts(
     saved_files["metrics_csv"] = metrics_path
     print(f"[저장 완료] 평가 지표 → {metrics_path}")
 
-    # ===== 2-1) classification_report TXT 저장 =====
-    report_txt = classification_report(y_true, y_pred, digits=4)
-    report_path = os.path.join(output_dir, f"classification_report_{model_tag}.txt")
-    with open(report_path, "w", encoding="utf-8") as f:
-        f.write(f"Model: {model_name}\n\n")
-        f.write(report_txt)
-    saved_files["classification_report_txt"] = report_path
-    print(f"[저장 완료] 분류 리포트(TXT) → {report_path}")
-
-    # ===== 2-2) classification_report JSON 저장 =====
+    # ===== 2-1) classification_report JSON 저장 =====
     report_dict = classification_report(y_true, y_pred, digits=4, output_dict=True)
     report_json_path = os.path.join(output_dir, f"classification_report_{model_tag}.json")
     with open(report_json_path, "w", encoding="utf-8") as f:
         json.dump(report_dict, f, indent=4, ensure_ascii=False)
     saved_files["classification_report_json"] = report_json_path
     print(f"[저장 완료] 분류 리포트(JSON) → {report_json_path}")
-
-    # ===== 2-3) 프론트용 요약 metrics JSON =====
-    summary = {
-        "model_name": model_name,
-        "metrics": {
-            "accuracy": metrics["accuracy"],
-            "precision": report_dict["1"]["precision"],  # 불량 class(1)
-            "recall": report_dict["1"]["recall"],
-            "f1_score": report_dict["1"]["f1-score"],
-        },
-    }
-    summary_path = os.path.join(output_dir, f"metrics_summary_{model_tag}.json")
-    with open(summary_path, "w", encoding="utf-8") as f:
-        json.dump(summary, f, indent=4, ensure_ascii=False)
-    saved_files["metrics_summary"] = summary_path
-    print(f"[저장 완료] 프론트용 요약 JSON → {summary_path}")
 
     # ===== 3) 테스트 예측 결과 저장 =====
     pred_df = pd.DataFrame(
