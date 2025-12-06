@@ -8,7 +8,7 @@ from app.services.analysis_service import run_analysis_pipeline
 
 router = APIRouter()
 
-# 분석 상태를 저장할 전역 변수 (실제로는 Redis 등 사용 권장)
+# 분석 상태를 저장할 전역 변수 
 analysis_status = {"status": "idle", "result": None}
 
 
