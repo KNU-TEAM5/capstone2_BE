@@ -26,7 +26,7 @@ def compute_quality_indices(
         - CQI (Completeness Quality Index): 완전성 지수 (결측치가 없는 정도)
         - UQI (Uniqueness Quality Index): 고유성 지수 (중복되지 않은 값의 비율)
         - VQI (Validity Quality Index): 유효성 지수 (유효 범위 내 값의 비율)
-        - DQI (Data Quality Index): 데이터 품질 지수 (위 3개의 평균)
+        - DQI (Data Quality Index): 데이터 품질 지수 (CQI와 VQI의 평균)
     """
     results = []
 
@@ -54,8 +54,8 @@ def compute_quality_indices(
         valid_count = series.between(vmin, vmax).sum()
         vqi = (valid_count / total_count) * 100 if total_count > 0 else 0
 
-        # (4) Data Quality Index (DQI) = 세 지수 평균
-        dqi = (cqi + uqi + vqi) / 3
+        # (4) Data Quality Index (DQI) = CQI와 VQI의 평균
+        dqi = (cqi + vqi) / 2
 
         results.append({
             "column": col,
