@@ -2,30 +2,24 @@
 # ml 모델 학습 및 저장 - RandomForest 학습, 모델 평가 및 artifacts 생성
 
 import os
-import datetime
-from math import sqrt
+import json
+from typing import Dict, Any, Tuple
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
+import joblib
 
 # 머신러닝 관련
-from sklearn import tree
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
-    mean_squared_error, confusion_matrix, accuracy_score, precision_score,
+    confusion_matrix, accuracy_score, precision_score,
     recall_score, f1_score, roc_curve, roc_auc_score, classification_report,
     average_precision_score, balanced_accuracy_score, ConfusionMatrixDisplay,
     precision_recall_curve, auc
 )
-import joblib
-import json
-
-# 이곳에 모델 학습 및 분석 함수들을 작성하세요
-from typing import Dict, Any, Tuple
 
 
 def prepare_data(
